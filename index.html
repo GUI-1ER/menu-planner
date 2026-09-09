@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="description" content="Planifie tes menus hebdomadaires et génère ta liste de courses automatiquement">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='50' font-size='90' text-anchor='middle' dominant-baseline='middle'>🍽</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%233b82f6' width='192' height='192' rx='44'/><text x='96' y='96' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle'>🍽</text></svg>">
+  <title>Planificateur de Menus</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+      background-color: #f9fafb;
+      color: #1f2937;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea, button {
+      font-family: inherit;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .container {
+      max-width: 100%;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: #1f2937;
+      border-bottom-color: #3b82f6;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.2s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .portion-info {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .portion-info strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .recipe-search {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .recipe-search input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .recipe-search input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .recipe-search button {
+      padding: 10px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .recipe-search button:active {
+      background: #2563eb;
+    }
+
+    .grid-menu {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (min-width: 640px) {
+      .grid-menu {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .grid-menu {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+
+    .day-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .day-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      margin-top: 0;
+    }
+
+    .meal-card {
+      margin-bottom: 8px;
+    }
+
+    .meal-card label {
+      display: block;
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .meal-card input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .meal-card input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #3b82f6;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .shopping-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .shopping-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .shopping-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .shopping-item.checked {
+      opacity: 0.6;
+    }
+
+    .shopping-item.checked .ingredient-name {
+      text-decoration: line-through;
+      color: #9ca3af;
+    }
+
+    .item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ingredient-name {
+      font-weight: 500;
+      font-size: 14px;
+      color: #1f2937;
+    }
+
+    .ingredient-qty {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      flex-shrink: 0;
+    }
+
+    .meal-detail {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .meal-detail h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1f2937;
+    }
+
+    .meal-detail .ingredients {
+      list-style: none;
+      font-size: 13px;
+    }
+
+    .meal-detail .ingredients li {
+      margin: 4px 0;
+      color: #4b5563;
+      padding-left: 12px;
+      position: relative;
+    }
+
+    .meal-detail .ingredients li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #9ca3af;
+    }
+
+    .print-btn {
+      width: 100%;
+      margin: 0;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .print-btn:active {
+      background: #2563eb;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    @supports (padding: max(0px)) {
+      body {
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+        padding-bottom: max(0px, env(safe-area-inset-bottom));
+      }
+
+      .header {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+      }
+
+      .container {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🍽 Menus</h1>
+  </div>
+
+  <div class="container">
+    <div class="portion-info">
+      <strong>Portions adaptées :</strong>
+      Guillaume 200g/repas + Mathilde 100g/repas = Quantités automatiquement calculées pour vous deux.
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('menus')">Menus</button>
+      <button class="tab-btn" onclick="switchTab('shopping')">Liste de courses</button>
+      <button class="tab-btn" onclick="switchTab('details')">Détail par repas</button>
+    </div>
+
+    <div id="menus" class="tab-content active">
+      <div class="recipe-search">
+        <input id="recipeSearch" type="text" placeholder="Chercher une recette..." onkeypress="if(event.key==='Enter') searchRecipe()">
+        <button onclick="searchRecipe()">Ajouter</button>
+      </div>
+      <div class="grid-menu" id="menuGrid"></div>
+    </div>
+
+    <div id="shopping" class="tab-content">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="itemCount">0</div>
+          <div class="stat-label">ingrédients</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="checkedCount">0</div>
+          <div class="stat-label">achetés</div>
+        </div>
+        <div class="stat-card">
+          <button class="print-btn" onclick="printList()">Imprimer</button>
+        </div>
+      </div>
+      <div class="shopping-list" id="shoppingList"></div>
+    </div>
+
+    <div id="details" class="tab-content">
+      <div id="detailsList"></div>
+    </div>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    const GUILLAUME_PORTION = 200;
+    const MATHILDE_PORTION = 100;
+    const STANDARD_PORTION = 100;
+    const PORTION_MULTIPLIER = (GUILLAUME_PORTION + MATHILDE_PORTION) / STANDARD_PORTION;
+
+    let recipes = JSON.parse(localStorage.getItem('recipes')) || {};
+    let menus = JSON.parse(localStorage.getItem('menus')) || {};
+    let removedItems = new Set(JSON.parse(localStorage.getItem('removedItems')) || []);
+
+    function parseQuantity(qtyStr) {
+      const match = qtyStr.match(/^([\d.]+)\s*(.*)$/);
+      if (match) {
+        return { value: parseFloat(match[1]), unit: match[2].trim() || '' };
+      }
+      return { value: 1, unit: qtyStr };
+    }
+
+    function formatQuantity(value, unit) {
+      const rounded = Math.round(value * 10) / 10;
+      return rounded % 1 === 0 ? `${Math.round(value)}${unit ? ' ' + unit : ''}` : `${rounded}${unit ? ' ' + unit : ''}`;
+    }
+
+    function adaptIngredient(qtyStr, servings) {
+      const { value, unit } = parseQuantity(qtyStr);
+      const adaptedValue = (value / servings) * PORTION_MULTIPLIER;
+      return formatQuantity(adaptedValue, unit);
+    }
+
+    async function searchRecipe() {
+      const recipeName = document.getElementById('recipeSearch').value.trim();
+      if (!recipeName) return;
+
+      document.getElementById('recipeSearch').disabled = true;
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Chargement...';
+
+      try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1000,
+            messages: [{
+              role: "user",
+              content: `Retourne UNIQUEMENT un JSON valide (sans markdown) pour: "${recipeName}"
+{
+  "name": "nom",
+  "servings": 4,
+  "ingredients": {
+    "ingredient1": "quantité1 unité1",
+    "ingredient2": "quantité2 unité2"
+  }
+}
+JSON uniquement.`
+            }]
+          })
+        });
+
+        const data = await response.json();
+        const content = data.content[0].text.trim();
+        const recipe = JSON.parse(content);
+        recipes[recipe.name] = { ingredients: recipe.ingredients, servings: recipe.servings };
+        localStorage.setItem('recipes', JSON.stringify(recipes));
+        document.getElementById('recipeSearch').value = '';
+        renderMenus();
+      } catch (err) {
+        alert('Erreur: ' + err.message);
+      } finally {
+        document.getElementById('recipeSearch').disabled = false;
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      document.querySelector(`button[onclick="switchTab('${tab}')"]`).classList.add('active');
+      if (tab === 'shopping') renderShoppingList();
+      if (tab === 'details') renderDetails();
+    }
+
+    function renderMenus() {
+      const grid = document.getElementById('menuGrid');
+      grid.innerHTML = '';
+      days.forEach((day, i) => {
+        const dayKey = `day${i}`;
+        const midiMenu = menus[`${dayKey}_midi`] || '';
+        const soirMenu = menus[`${dayKey}_soir`] || '';
+
+        const dayCard = document.createElement('div');
+        dayCard.className = 'day-card';
+        dayCard.innerHTML = `
+          <h3>${day}</h3>
+          <div class="meal-card">
+            <label>Midi</label>
+            <input type="text" value="${midiMenu}" list="recipe-list" placeholder="Midi" onchange="menus['${dayKey}_midi'] = this.value; saveMenus(); renderMenus();">
+          </div>
+          <div class="meal-card">
+            <label>Soir</label>
+            <input type="text" value="${soirMenu}" list="recipe-list" placeholder="Soir" onchange="menus['${dayKey}_soir'] = this.value; saveMenus(); renderMenus();">
+          </div>
+        `;
+        grid.appendChild(dayCard);
+      });
+
+      let datalist = document.getElementById('recipe-list');
+      if (!datalist) {
+        datalist = document.createElement('datalist');
+        datalist.id = 'recipe-list';
+        document.body.appendChild(datalist);
+      }
+      datalist.innerHTML = Object.keys(recipes).map(r => `<option value="${r}">`).join('');
+    }
+
+    function saveMenus() {
+      localStorage.setItem('menus', JSON.stringify(menus));
+    }
+
+    function mergeIngredients() {
+      const merged = {};
+      days.forEach((day, i) => {
+        const midiMenu = menus[`day${i}_midi`];
+        const soirMenu = menus[`day${i}_soir`];
+
+        if (midiMenu && recipes[midiMenu]) {
+          const recipe = recipes[midiMenu];
+          const servings = recipe.servings || 4;
+          Object.entries(recipe.ingredients || {}).forEach(([ing, qty]) => {
+            const adaptedQty = adaptIngredient(qty, servings);
+            const key = ing.toLowerCase();
+            if (!merged[key]) {
+              merged[key] = { name: ing, qty: adaptedQty, meals: [] };
+            } else {
+              merged[key].qty = mergeQuantities(merged[key].qty, adaptedQty);
+            }
+            merged[key].meals.push(`${day} - Midi: ${midiMenu}`);
+          });
+        }
+        if (soirMenu && recipes[soirMenu]) {
+          const recipe = recipes[soirMenu];
+          const servings = recipe.servings || 4;
+          Object.entries(recipe.ingredients || {}).forEach(([ing, qty]) => {
+            const adaptedQty = adaptIngredient(qty, servings);
+            const key = ing.toLowerCase();
+            if (!merged[key]) {
+              merged[key] = { name: ing, qty: adaptedQty, meals: [] };
+            } else {
+              merged[key].qty = mergeQuantities(merged[key].qty, adaptedQty);
+            }
+            merged[key].meals.push(`${day} - Soir: ${soirMenu}`);
+          });
+        }
+      });
+      return merged;
+    }
+
+    function mergeQuantities(qty1, qty2) {
+      const p1 = parseQuantity(qty1);
+      const p2 = parseQuantity(qty2);
+      if (p1.unit === p2.unit) {
+        return formatQuantity(p1.value + p2.value, p1.unit);
+      }
+      return qty1 + ' + ' + qty2;
+    }
+
+    function renderShoppingList() {
+      const merged = mergeIngredients();
+      const items = Object.values(merged).filter(item => !removedItems.has(item.name.toLowerCase()));
+
+      let html = '';
+      items.forEach(item => {
+        html += `
+          <div class="shopping-item" id="item-${item.name.toLowerCase()}">
+            <input type="checkbox" onchange="this.parentElement.classList.toggle('checked'); updateShoppingCount();">
+            <div class="item-info">
+              <div class="ingredient-name">${item.name}</div>
+              <div class="ingredient-qty">${item.qty}</div>
+            </div>
+            <button class="btn-remove" onclick="removeIngredient('${item.name.toLowerCase()}')">✕</button>
+          </div>
+        `;
+      });
+
+      document.getElementById('shoppingList').innerHTML = html || '<div class="empty-state">Ajoutez des recettes pour générer votre liste de courses</div>';
+      updateShoppingCount();
+      document.getElementById('itemCount').textContent = items.length;
+    }
+
+    function removeIngredient(name) {
+      removedItems.add(name);
+      localStorage.setItem('removedItems', JSON.stringify([...removedItems]));
+      renderShoppingList();
+    }
+
+    function updateShoppingCount() {
+      const checked = document.querySelectorAll('#shoppingList input[type="checkbox"]:checked').length;
+      document.getElementById('checkedCount').textContent = checked;
+    }
+
+    function renderDetails() {
+      let html = '';
+      days.forEach((day, i) => {
+        const midiMenu = menus[`day${i}_midi`];
+        const soirMenu = menus[`day${i}_soir`];
+
+        html += `<h3>${day}</h3>`;
+
+        if (midiMenu && recipes[midiMenu]) {
+          const recipe = recipes[midiMenu];
+          const servings = recipe.servings || 4;
+          html += `<div class="meal-detail"><h4>${midiMenu}</h4><ul class="ingredients">`;
+          Object.entries(recipe.ingredients || {}).forEach(([ing, qty]) => {
+            const adaptedQty = adaptIngredient(qty, servings);
+            html += `<li>${ing}: ${adaptedQty}</li>`;
+          });
+          html += `</ul></div>`;
+        }
+
+        if (soirMenu && recipes[soirMenu]) {
+          const recipe = recipes[soirMenu];
+          const servings = recipe.servings || 4;
+          html += `<div class="meal-detail"><h4>${soirMenu}</h4><ul class="ingredients">`;
+          Object.entries(recipe.ingredients || {}).forEach(([ing, qty]) => {
+            const adaptedQty = adaptIngredient(qty, servings);
+            html += `<li>${ing}: ${adaptedQty}</li>`;
+          });
+          html += `</ul></div>`;
+        }
+      });
+
+      document.getElementById('detailsList').innerHTML = html || '<div class="empty-state">Aucun menu planifié pour cette semaine</div>';
+    }
+
+    function printList() {
+      const merged = mergeIngredients();
+      const items = Object.values(merged).filter(item => !removedItems.has(item.name.toLowerCase()));
+      let text = 'LISTE DE COURSES\n\n';
+      items.forEach(item => {
+        text += `☐ ${item.name} - ${item.qty}\n`;
+      });
+      const w = window.open();
+      w.document.write('<pre style="font-family: monospace; white-space: pre-wrap; padding: 20px;">' + text + '</pre>');
+      w.print();
+    }
+
+    renderMenus();
+  </script>
+</body>
+</html>
